@@ -2,18 +2,18 @@
   "metadata": {
     "version": "2.0.0",
     "last_updated": "2025-01-28",
-    "codename": "Project Nexus",
-    "author": "DubCity AI Solutions",
+    "codename": "CEO",
+    "author": "Jono131122",
     "acknowledgments": [
       {
         "team": "DeepSeek Development Team, Jono131122, and Legal AI Innovations",
         "contribution": "Provided foundational support, guidance, and advanced AI integration for the development of this tool."
       }
     ],
-    "license": "DubCity-AI-Solutions",
+    "license": "MIT",
     "contact": {
-      "email": "dubcityaisolutions@gmail.com",
-      "website": "https://dubcity-ai-solutions.lovable.app/"
+      "email": "dev-team@forge-empire.com",
+      "website": "https://forge-empire.com"
     },
     "core_philosophy": "This structure represents a living, breathing organizational OS designed for agility, data-driven decision-making, and seamless human-AI collaboration. It is the blueprint for a cognitive corporation."
   },
