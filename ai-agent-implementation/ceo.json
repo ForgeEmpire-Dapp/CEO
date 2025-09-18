@@ -302,6 +302,14 @@
           "tools": ["GitLab Ultimate (DevOps)", "Jira Align (Epic Management)", "New Relic (APM)"],
           "key_metrics": ["Deployment Frequency", "Lead Time for Changes", "Change Failure Rate", "System Uptime"],
           "ai_augmentation": "AI-Powered Code Reviewer, Automated Bug Prediction"
+        },
+        {
+          "name": "VP of Secure Computation",
+          "description": "Leads the development and operation of secure multi-party computation systems. Manages MPC infrastructure and ensures privacy-preserving computation capabilities.",
+          "core_teams": ["MPC Protocol Team", "Cryptographic Engineering Team", "Security Assurance Team"],
+          "tools": ["MP-SPDZ (MPC Framework)", "Python Cryptography Libraries", "Kubernetes (Orchestration)"],
+          "key_metrics": ["Computation Throughput", "Security Compliance", "Protocol Efficiency", "Privacy Guarantees"],
+          "ai_augmentation": "AI-Driven MPC Protocol Optimization, Automated Security Verification"
         }
       ]
     },
@@ -357,7 +365,8 @@
       {"role": "CGO", "responsibility": "Ethical Implications & Bias Mitigation"},
       {"role": "CSO", "responsibility": "AI Security & Adversarial Testing"},
       {"role": "CPO", "responsibility": "User Privacy & Data Usage"},
-      {"role": "Head of AI Research", "responsibility": "Algorithm Integrity"}
+      {"role": "Head of AI Research", "responsibility": "Algorithm Integrity"},
+      {"role": "VP of Secure Computation", "responsibility": "MPC Security & Privacy Compliance"}
     ],
     "charter": "Ensure all AI tools comply with company ethics policy and relevant regulations (e.g., EU AI Act)."
   },
@@ -388,6 +397,8 @@
     "data_warehouse": "Snowflake, BigQuery",
     "bi_analytics": "Tableau, Power BI, Looker",
     "devops": "GitLab CI/CD, Jenkins, Docker, Kubernetes",
-    "ai_platform": "AWS SageMaker, Google Vertex AI"
+    "ai_platform": "AWS SageMaker, Google Vertex AI",
+    "mpc_frameworks": "MP-SPDZ, SCALE-MAMBA, JIFF",
+    "cryptographic_libraries": "libsodium, OpenSSL, libgcrypt"
   }
 }

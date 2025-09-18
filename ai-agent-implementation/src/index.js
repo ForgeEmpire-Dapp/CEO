@@ -7,7 +7,8 @@ dotenv.config();
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = 3000;
+const PORT = process.env.PORT || DEFAULT_PORT;
 
 // Middleware
 app.use(express.json());
@@ -49,6 +50,9 @@ const AIGovernanceCouncil = require('./governance/AIGovernance');
 const DataIntegration = require('./integration/DataIntegration');
 const TechnologyStack = require('./utils/TechnologyStack');
 
+// Import MPC components
+const MPCManager = require('./mpc/MPCManager');
+
 // Initialize agents and modules
 const executiveAgent = new ExecutiveAgent(logger);
 const directorAgent = new DirectorAgent(logger);
@@ -58,6 +62,9 @@ const podManager = new PodManager(logger);
 const aiGovernanceCouncil = new AIGovernanceCouncil(logger);
 const dataIntegration = new DataIntegration(logger);
 const technologyStack = new TechnologyStack(logger);
+
+// Initialize MPC Manager
+const mpcManager = new MPCManager(logger);
 
 // Routes
 app.get('/', (req, res) => {
@@ -113,6 +120,82 @@ app.get('/api/technology/stack', (req, res) => {
   res.json(stack);
 });
 
+// MPC routes
+app.get('/api/mpc/servers', (req, res) => {
+  const servers = mpcManager.getAllServers();
+  res.json(servers);
+});
+
+app.get('/api/mpc/servers/:name', (req, res) => {
+  const server = mpcManager.getServerByName(req.params.name);
+  if (server) {
+    res.json(server);
+  } else {
+    res.status(404).json({ error: 'MPC Server not found' });
+  }
+});
+
+app.post('/api/mpc/servers', express.json(), (req, res) => {
+  try {
+    const { name, description, parties } = req.body;
+    const server = mpcManager.createServer(name, description, parties);
+    res.status(201).json(server.getMPCInfo());
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.delete('/api/mpc/servers/:name', (req, res) => {
+  const server = mpcManager.removeServer(req.params.name);
+  if (server) {
+    res.json({ message: 'MPC Server removed successfully' });
+  } else {
+    res.status(404).json({ error: 'MPC Server not found' });
+  }
+});
+
+app.post('/api/mpc/compute', express.json(), async (req, res) => {
+  try {
+    const { serverName, task, inputData, dataSensitivity } = req.body;
+    if (serverName) {
+      const result = await mpcManager.executeTaskOnServer(serverName, task, inputData, dataSensitivity);
+      res.json(result);
+    } else {
+      const results = await mpcManager.executeTask(task, inputData, dataSensitivity);
+      res.json(results);
+    }
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// MPC Security and Governance routes
+app.get('/api/mpc/security/policies', (req, res) => {
+  const policies = mpcManager.getSecurityGovernance().getPolicies();
+  res.json(policies);
+});
+
+app.post('/api/mpc/security/policies', express.json(), (req, res) => {
+  try {
+    const { policyId, policy } = req.body;
+    mpcManager.getSecurityGovernance().defineSecurityPolicy(policyId, policy);
+    res.status(201).json({ message: 'Policy created successfully' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/api/mpc/security/audit-logs', (req, res) => {
+  const filter = req.query;
+  const logs = mpcManager.getAuditLogs(filter);
+  res.json(logs);
+});
+
+app.get('/api/mpc/security/report', (req, res) => {
+  const report = mpcManager.getSecurityReport();
+  res.json(report);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -121,10 +204,46 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Handle port in use error
+app.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error(`Port ${PORT} is already in use. Trying ${PORT + 1}...`);
+    setTimeout(() => {
+      app.listen(PORT + 1, () => {
+        logger.info(`AI Agent Organization System running on port ${PORT + 1}`);
+        console.log(`AI Agent Organization System running on port ${PORT + 1}`);
+      });
+    }, 1000);
+  } else {
+    logger.error('Server error:', err);
+  }
+});
+
+// Start server with error handling
+const server = app.listen(PORT, () => {
   logger.info(`AI Agent Organization System running on port ${PORT}`);
   console.log(`AI Agent Organization System running on port ${PORT}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error(`Port ${PORT} is already in use. Trying ${PORT + 1}...`);
+    setTimeout(() => {
+      app.listen(PORT + 1, () => {
+        logger.info(`AI Agent Organization System running on port ${PORT + 1}`);
+        console.log(`AI Agent Organization System running on port ${PORT + 1}`);
+      });
+    }, 1000);
+  } else {
+    logger.error('Server error:', err);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  logger.info('Shutting down server...');
+  server.close(() => {
+    logger.info('Server closed.');
+    process.exit(0);
+  });
 });
 
 module.exports = app;
