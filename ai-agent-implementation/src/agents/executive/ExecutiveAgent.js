@@ -74,6 +74,46 @@ class ExecutiveAgent {
     
     return results;
   }
+  
+  // Send a message from an executive agent to another agent
+  async sendMessage(fromAgentName, to, message, priority = 'normal') {
+    const agent = this.agents.find(a => a.name === fromAgentName);
+    if (!agent) {
+      throw new Error(`Agent ${fromAgentName} not found`);
+    }
+    
+    try {
+      const result = await agent.sendMessage(to, message, priority);
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to send message', { 
+        from: fromAgentName, 
+        to, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+  
+  // Request a task from an executive agent
+  async requestTask(fromAgentName, task, assignedTo = null, deadline = null, priority = 'normal') {
+    const agent = this.agents.find(a => a.name === fromAgentName);
+    if (!agent) {
+      throw new Error(`Agent ${fromAgentName} not found`);
+    }
+    
+    try {
+      const result = await agent.requestTask(task, assignedTo, deadline, priority);
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to request task', { 
+        from: fromAgentName, 
+        task, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
 }
 
 module.exports = ExecutiveAgent;

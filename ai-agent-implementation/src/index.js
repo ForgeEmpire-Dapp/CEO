@@ -53,6 +53,9 @@ const TechnologyStack = require('./utils/TechnologyStack');
 // Import MPC components
 const MPCManager = require('./mpc/MPCManager');
 
+// Import MCP components
+const MCPManager = require('./mcp-servers/MCPManager');
+
 // Initialize agents and modules
 const executiveAgent = new ExecutiveAgent(logger);
 const directorAgent = new DirectorAgent(logger);
@@ -65,6 +68,9 @@ const technologyStack = new TechnologyStack(logger);
 
 // Initialize MPC Manager
 const mpcManager = new MPCManager(logger);
+
+// Initialize MCP Manager with required services
+const mcpManager = new MCPManager(logger, dataIntegration, podManager);
 
 // Routes
 app.get('/', (req, res) => {
@@ -196,6 +202,22 @@ app.get('/api/mpc/security/report', (req, res) => {
   res.json(report);
 });
 
+// MCP routes
+app.get('/api/mcp/servers', (req, res) => {
+  const servers = mcpManager.getAllServers();
+  res.json(servers);
+});
+
+app.get('/api/mcp/clients', (req, res) => {
+  const clients = mcpManager.getAllClients();
+  res.json(clients);
+});
+
+app.get('/api/mcp/info', (req, res) => {
+  const info = mcpManager.getInfo();
+  res.json(info);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -237,12 +259,43 @@ const server = app.listen(PORT, () => {
   }
 });
 
+// Start MCP servers
+async function startMCPServers() {
+  try {
+    // Set encryption key for secure communications
+    mcpManager.setEncryptionKey('mcp-encryption-key-2025');
+    
+    // Create MCP servers for different agent types
+    await mcpManager.createServer('executive-mcp', 'executive', 3002);
+    await mcpManager.createServer('director-mcp', 'director', 3003);
+    await mcpManager.createServer('manager-mcp', 'manager', 3004);
+    await mcpManager.createServer('contributor-mcp', 'contributor', 3005);
+    
+    logger.info('MCP servers started successfully');
+  } catch (error) {
+    logger.error('Failed to start MCP servers', { error: error.message });
+  }
+}
+
+// Start MCP servers
+startMCPServers();
+
 // Graceful shutdown
 process.on('SIGINT', () => {
   logger.info('Shutting down server...');
-  server.close(() => {
-    logger.info('Server closed.');
-    process.exit(0);
+  
+  // Stop MCP servers
+  mcpManager.stopAllServers().then(() => {
+    logger.info('MCP servers stopped');
+    
+    // Close main server
+    server.close(() => {
+      logger.info('Server closed.');
+      process.exit(0);
+    });
+  }).catch(error => {
+    logger.error('Error stopping MCP servers', { error: error.message });
+    process.exit(1);
   });
 });
 
