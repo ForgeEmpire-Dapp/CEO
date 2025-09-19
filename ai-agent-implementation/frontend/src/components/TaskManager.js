@@ -12,65 +12,56 @@ const TaskManager = () => {
   });
   const [loading, setLoading] = useState(true);
   const [agents, setAgents] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate fetching tasks and agents
-    const fetchData = async () => {
-      // In a real implementation, this would fetch from your backend API
-      setTimeout(() => {
-        setTasks([
-          {
-            id: 1,
-            title: 'Analyze customer feedback',
-            description: 'Review and analyze recent customer feedback to identify trends',
-            assignedTo: 'Data Scientist',
-            priority: 'high',
-            status: 'in-progress',
-            deadline: '2025-09-25',
-            createdAt: '2025-09-18'
-          },
-          {
-            id: 2,
-            title: 'Update documentation',
-            description: 'Update API documentation with new endpoints',
-            assignedTo: 'Technical Writer',
-            priority: 'normal',
-            status: 'pending',
-            deadline: '2025-09-30',
-            createdAt: '2025-09-18'
-          },
-          {
-            id: 3,
-            title: 'Security audit',
-            description: 'Perform quarterly security audit of all systems',
-            assignedTo: 'Security Officer',
-            priority: 'critical',
-            status: 'completed',
-            deadline: '2025-09-15',
-            createdAt: '2025-09-10'
-          }
-        ]);
-        
-        setAgents([
-          'CEO',
-          'CTO',
-          'CFO',
-          'VP of Engineering',
-          'VP of Marketing',
-          'Engineering Manager',
-          'Marketing Manager',
-          'Software Engineer',
-          'Data Scientist',
-          'Security Officer',
-          'Technical Writer'
-        ]);
-        
-        setLoading(false);
-      }, 1000);
-    };
-    
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch tasks from backend
+      const tasksResponse = await fetch('/api/tasks');
+      if (!tasksResponse.ok) {
+        throw new Error('Failed to fetch tasks');
+      }
+      const tasksData = await tasksResponse.json();
+      
+      // Fetch agents from backend
+      const agentsResponse = await fetch('/api/agents/executive');
+      if (!agentsResponse.ok) {
+        throw new Error('Failed to fetch agents');
+      }
+      const agentsData = await agentsResponse.json();
+      
+      setTasks(tasksData);
+      
+      // Extract agent names from all layers
+      const allAgents = [
+        ...agentsData.map(agent => agent.name),
+        'CTO',
+        'CFO',
+        'VP of Engineering',
+        'VP of Marketing',
+        'Engineering Manager',
+        'Marketing Manager',
+        'Software Engineer',
+        'Data Scientist',
+        'Security Officer',
+        'Technical Writer'
+      ];
+      
+      setAgents(allAgents);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -80,36 +71,82 @@ const TaskManager = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!newTask.title.trim()) return;
     
-    const task = {
-      id: tasks.length + 1,
-      ...newTask,
-      status: 'pending',
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    
-    setTasks(prev => [task, ...prev]);
-    setNewTask({
-      title: '',
-      description: '',
-      assignedTo: '',
-      priority: 'normal',
-      deadline: ''
-    });
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...newTask,
+          status: 'pending',
+          createdAt: new Date().toISOString().split('T')[0]
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create task');
+      }
+      
+      const createdTask = await response.json();
+      setTasks(prev => [createdTask, ...prev]);
+      setNewTask({
+        title: '',
+        description: '',
+        assignedTo: '',
+        priority: 'normal',
+        deadline: ''
+      });
+    } catch (err) {
+      console.error('Error creating task:', err);
+      setError('Failed to create task');
+    }
   };
 
-  const updateTaskStatus = (taskId, newStatus) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
-    ));
+  const updateTaskStatus = async (taskId, newStatus) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update task');
+      }
+      
+      const updatedTask = await response.json();
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? updatedTask : task
+      ));
+    } catch (err) {
+      console.error('Error updating task:', err);
+      setError('Failed to update task');
+    }
   };
 
-  const deleteTask = (taskId) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  const deleteTask = async (taskId) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete task');
+      }
+      
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+    } catch (err) {
+      console.error('Error deleting task:', err);
+      setError('Failed to delete task');
+    }
   };
 
   const getStatusClass = (status) => {
@@ -127,6 +164,13 @@ const TaskManager = () => {
   return (
     <div className="task-manager">
       <h2>Task Management</h2>
+      
+      {error && (
+        <div className="error-message">
+          <p>{error}</p>
+          <button onClick={fetchData}>Retry</button>
+        </div>
+      )}
       
       <div className="task-form-section">
         <h3>Create New Task</h3>

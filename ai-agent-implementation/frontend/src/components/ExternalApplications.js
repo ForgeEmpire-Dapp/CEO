@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ExternalApplications.css';
 
 const ExternalApplications = () => {
@@ -10,23 +10,12 @@ const ExternalApplications = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [connectionStatus, setConnectionStatus] = useState({});
 
-  // Use the API URL from environment variables or default to localhost:30001
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:30001';
-
-  useEffect(() => {
-    fetchApplications();
-  }, []);
-
-  useEffect(() => {
-    filterApplications();
-  }, [applications, searchTerm, selectedCategory]);
-
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/api/integration/external-applications`);
+      const response = await fetch(`/api/integration/external-applications`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch external applications');
@@ -40,9 +29,9 @@ const ExternalApplications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterApplications = () => {
+  const filterApplications = useCallback(() => {
     let filtered = applications;
     
     if (searchTerm) {
@@ -58,14 +47,22 @@ const ExternalApplications = () => {
     }
     
     setFilteredApplications(filtered);
-  };
+  }, [applications, searchTerm, selectedCategory]);
 
-  const handleConnect = async (appId) => {
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
+
+  useEffect(() => {
+    filterApplications();
+  }, [filterApplications]);
+
+  const handleConnect = useCallback(async (appId) => {
     try {
       // In a real implementation, you would collect credentials from the user
       const credentials = {}; // Placeholder for credentials
       
-      const response = await fetch(`${API_BASE_URL}/api/integration/external-applications/${appId}/connect`, {
+      const response = await fetch(`/api/integration/external-applications/${appId}/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,11 +91,11 @@ const ExternalApplications = () => {
         [appId]: { status: 'error', message: err.message }
       }));
     }
-  };
+  }, [fetchApplications]);
 
-  const handleDisconnect = async (appId) => {
+  const handleDisconnect = useCallback(async (appId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/integration/external-applications/${appId}/disconnect`, {
+      const response = await fetch(`/api/integration/external-applications/${appId}/disconnect`, {
         method: 'POST',
       });
       
@@ -121,7 +118,7 @@ const ExternalApplications = () => {
         [appId]: { status: 'error', message: err.message }
       }));
     }
-  };
+  }, [fetchApplications]);
 
   const getConnectionStatus = (app) => {
     if (connectionStatus[app.id]) {

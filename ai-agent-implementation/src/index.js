@@ -16,7 +16,7 @@ app.use(express.json());
 
 // Add CORS middleware to allow requests from the frontend
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3002',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
   credentials: true
 }));
 
@@ -68,6 +68,9 @@ const LLMService = require('./llm/LLMService');
 const AgentDecisionMaker = require('./llm/AgentDecisionMaker');
 const NaturalLanguageInterface = require('./llm/NaturalLanguageInterface');
 
+// Import TaskManager
+const TaskManager = require('./tasks/TaskManager');
+
 // Initialize agents and modules
 const executiveAgent = new ExecutiveAgent(logger);
 const directorAgent = new DirectorAgent(logger);
@@ -105,6 +108,9 @@ if (hasAnyApiKey) {
 } else {
   logger.warn('No valid API keys found in environment variables - LLM features will be limited');
 }
+
+// Initialize TaskManager
+const taskManager = new TaskManager(logger);
 
 // Routes
 app.get('/', (req, res) => {
@@ -395,6 +401,89 @@ if (llmService && naturalLanguageInterface) {
     res.status(501).json({ error: 'LLM functionality not available - API keys not configured' });
   });
 }
+
+// Task routes
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await taskManager.getAllTasks();
+    res.json(tasks);
+  } catch (error) {
+    logger.error('Failed to fetch tasks', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
+});
+
+app.get('/api/tasks/:id', async (req, res) => {
+  try {
+    const task = await taskManager.getTaskById(req.params.id);
+    if (task) {
+      res.json(task);
+    } else {
+      res.status(404).json({ error: 'Task not found' });
+    }
+  } catch (error) {
+    logger.error('Failed to fetch task', { error: error.message, taskId: req.params.id });
+    res.status(500).json({ error: 'Failed to fetch task' });
+  }
+});
+
+app.post('/api/tasks', express.json(), async (req, res) => {
+  try {
+    const task = await taskManager.createTask(req.body);
+    res.status(201).json(task);
+  } catch (error) {
+    logger.error('Failed to create task', { error: error.message });
+    res.status(500).json({ error: 'Failed to create task' });
+  }
+});
+
+app.put('/api/tasks/:id', express.json(), async (req, res) => {
+  try {
+    const task = await taskManager.updateTask(req.params.id, req.body);
+    res.json(task);
+  } catch (error) {
+    if (error.message === 'Task not found') {
+      res.status(404).json({ error: 'Task not found' });
+    } else {
+      logger.error('Failed to update task', { error: error.message, taskId: req.params.id });
+      res.status(500).json({ error: 'Failed to update task' });
+    }
+  }
+});
+
+app.delete('/api/tasks/:id', async (req, res) => {
+  try {
+    const task = await taskManager.deleteTask(req.params.id);
+    res.json({ message: 'Task deleted successfully', task });
+  } catch (error) {
+    if (error.message === 'Task not found') {
+      res.status(404).json({ error: 'Task not found' });
+    } else {
+      logger.error('Failed to delete task', { error: error.message, taskId: req.params.id });
+      res.status(500).json({ error: 'Failed to delete task' });
+    }
+  }
+});
+
+app.get('/api/tasks/assignee/:assignee', async (req, res) => {
+  try {
+    const tasks = await taskManager.getTasksByAssignee(req.params.assignee);
+    res.json(tasks);
+  } catch (error) {
+    logger.error('Failed to fetch tasks by assignee', { error: error.message, assignee: req.params.assignee });
+    res.status(500).json({ error: 'Failed to fetch tasks by assignee' });
+  }
+});
+
+app.get('/api/tasks/status/:status', async (req, res) => {
+  try {
+    const tasks = await taskManager.getTasksByStatus(req.params.status);
+    res.json(tasks);
+  } catch (error) {
+    logger.error('Failed to fetch tasks by status', { error: error.message, status: req.params.status });
+    res.status(500).json({ error: 'Failed to fetch tasks by status' });
+  }
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
