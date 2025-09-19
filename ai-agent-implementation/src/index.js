@@ -56,6 +56,11 @@ const MPCManager = require('./mpc/MPCManager');
 // Import MCP components
 const MCPManager = require('./mcp-servers/MCPManager');
 
+// Import LLM components
+const LLMService = require('./llm/LLMService');
+const AgentDecisionMaker = require('./llm/AgentDecisionMaker');
+const NaturalLanguageInterface = require('./llm/NaturalLanguageInterface');
+
 // Initialize agents and modules
 const executiveAgent = new ExecutiveAgent(logger);
 const directorAgent = new DirectorAgent(logger);
@@ -71,6 +76,17 @@ const mpcManager = new MPCManager(logger);
 
 // Initialize MCP Manager with required services
 const mcpManager = new MCPManager(logger, dataIntegration, podManager);
+
+// Initialize LLM components (if API key is available)
+let llmService, agentDecisionMaker, naturalLanguageInterface;
+if (process.env.OPENAI_API_KEY) {
+  llmService = new LLMService(process.env.OPENAI_API_KEY, logger);
+  agentDecisionMaker = new AgentDecisionMaker(llmService, logger);
+  naturalLanguageInterface = new NaturalLanguageInterface(llmService, null, logger);
+  logger.info('LLM components initialized with OpenAI API key');
+} else {
+  logger.warn('OPENAI_API_KEY not found in environment variables - LLM features will be limited');
+}
 
 // Routes
 app.get('/', (req, res) => {
@@ -217,6 +233,39 @@ app.get('/api/mcp/info', (req, res) => {
   const info = mcpManager.getInfo();
   res.json(info);
 });
+
+// LLM routes (if LLM components are available)
+if (llmService && naturalLanguageInterface) {
+  app.post('/api/llm/query', express.json(), async (req, res) => {
+    try {
+      const { query, context } = req.body;
+      const result = await naturalLanguageInterface.processQuery(query, context);
+      res.json(result);
+    } catch (error) {
+      logger.error('LLM query processing failed', { error: error.message });
+      res.status(500).json({ error: 'Failed to process query' });
+    }
+  });
+
+  app.post('/api/llm/parse-task', express.json(), async (req, res) => {
+    try {
+      const { taskRequest } = req.body;
+      const task = await naturalLanguageInterface.parseTaskRequest(taskRequest);
+      res.json(task);
+    } catch (error) {
+      logger.error('Task parsing failed', { error: error.message });
+      res.status(500).json({ error: 'Failed to parse task' });
+    }
+  });
+} else {
+  app.post('/api/llm/query', (req, res) => {
+    res.status(501).json({ error: 'LLM functionality not available - API key not configured' });
+  });
+  
+  app.post('/api/llm/parse-task', (req, res) => {
+    res.status(501).json({ error: 'LLM functionality not available - API key not configured' });
+  });
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {

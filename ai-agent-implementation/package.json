@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "test": "jest",
+    "frontend": "cd frontend && react-scripts start",
+    "build": "cd frontend && react-scripts build"
   },
   "keywords": [
     "ai",

@@ -1,0 +1,70 @@
+.agent-visualization {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.agent-hierarchy h3 {
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin: 20px 0 15px 0;
+}
+
+.agent-hierarchy h3:first-child {
+  margin-top: 0;
+}
+
+.agent-level {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.agent-node {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fafafa;
+  min-width: 200px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agent-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.status-indicator.active {
+  background-color: #28a745;
+}
+
+.status-indicator.idle {
+  background-color: #ffc107;
+}
+
+.status-indicator.inactive {
+  background-color: #dc3545;
+}
+
+.agent-info h4 {
+  margin: 0 0 5px 0;
+  color: #282c34;
+}
+
+.agent-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}

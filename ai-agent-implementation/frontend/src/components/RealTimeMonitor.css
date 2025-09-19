@@ -1,0 +1,92 @@
+.real-time-monitor {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.monitor-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.monitor-controls label {
+  font-weight: bold;
+}
+
+.monitor-controls select {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.activity-stream h3 {
+  color: #333;
+  margin-top: 0;
+}
+
+.no-activities {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 40px;
+}
+
+.activities-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.agent-type {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.agent-type.executive {
+  background-color: #007bff;
+  color: white;
+}
+
+.agent-type.director {
+  background-color: #28a745;
+  color: white;
+}
+
+.agent-type.manager {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.agent-type.contributor {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.activity-time {
+  color: #666;
+  font-size: 14px;
+}
+
+.activity-content {
+  color: #555;
+}
