@@ -32,6 +32,7 @@ const AgentVisualization = ({ agentData }) => {
               <div className={getStatusClass(agent.status)}></div>
               <div className="agent-info">
                 <h4>{agent.name}</h4>
+                {agent.description && <p className="agent-description">{agent.description}</p>}
                 <p>Last active: {formatLastActive(agent.lastActive)}</p>
               </div>
             </div>
@@ -45,6 +46,7 @@ const AgentVisualization = ({ agentData }) => {
               <div className={getStatusClass(agent.status)}></div>
               <div className="agent-info">
                 <h4>{agent.name}</h4>
+                {agent.description && <p className="agent-description">{agent.description}</p>}
                 <p>Last active: {formatLastActive(agent.lastActive)}</p>
               </div>
             </div>
@@ -58,6 +60,7 @@ const AgentVisualization = ({ agentData }) => {
               <div className={getStatusClass(agent.status)}></div>
               <div className="agent-info">
                 <h4>{agent.name}</h4>
+                {agent.description && <p className="agent-description">{agent.description}</p>}
                 <p>Last active: {formatLastActive(agent.lastActive)}</p>
               </div>
             </div>
@@ -71,6 +74,7 @@ const AgentVisualization = ({ agentData }) => {
               <div className={getStatusClass(agent.status)}></div>
               <div className="agent-info">
                 <h4>{agent.name}</h4>
+                {agent.description && <p className="agent-description">{agent.description}</p>}
                 <p>Last active: {formatLastActive(agent.lastActive)}</p>
               </div>
             </div>

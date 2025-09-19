@@ -1,216 +1,265 @@
 const OpenAI = require('openai');
+const axios = require('axios');
 const winston = require('winston');
 
 /**
- * LLM Service for integrating with OpenAI API
+ * LLM Service for interacting with various language models
  */
 class LLMService {
   /**
    * Create a new LLM Service
-   * @param {string} apiKey - OpenAI API key
+   * @param {string} openaiApiKey - OpenAI API key
    * @param {object} logger - Logger instance
    */
-  constructor(apiKey, logger = null) {
-    this.apiKey = apiKey;
-    this.logger = logger || this.createDefaultLogger();
+  constructor(openaiApiKey, logger = null) {
+    this.openaiApiKey = openaiApiKey;
+    this.logger = logger;
     
-    if (this.apiKey) {
-      this.openai = new OpenAI({ apiKey: this.apiKey });
-      this.logger.info('LLM Service initialized with OpenAI API');
-    } else {
+    // Initialize OpenAI client if API key is provided
+    if (this.openaiApiKey) {
+      this.openai = new OpenAI({
+        apiKey: this.openaiApiKey,
+      });
+    }
+    
+    if (this.logger) {
       this.logger.warn('LLM Service initialized without API key - functionality will be limited');
     }
   }
 
   /**
-   * Create a default logger if none provided
-   * @returns {object} Winston logger instance
+   * Set API keys for different providers
+   * @param {object} apiKeys - Object containing API keys for different providers
    */
-  createDefaultLogger() {
-    return winston.createLogger({
-      level: 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.errors({ stack: true }),
-        winston.format.splat(),
-        winston.format.json()
-      ),
-      defaultMeta: { service: 'llm-service' },
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-          )
-        })
-      ]
-    });
+  setApiKeys(apiKeys) {
+    this.apiKeys = apiKeys;
+    
+    // Reinitialize clients if keys are provided
+    if (apiKeys.openai) {
+      this.openai = new OpenAI({
+        apiKey: apiKeys.openai,
+      });
+    }
   }
 
   /**
-   * Generate text using OpenAI GPT model
-   * @param {string} prompt - The prompt to send to the model
-   * @param {object} options - Additional options for the request
+   * Generate text using the specified LLM provider
+   * @param {string} prompt - Prompt for the LLM
+   * @param {object} options - Options for the LLM request
    * @returns {string} Generated text
    */
   async generateText(prompt, options = {}) {
+    const {
+      provider = 'openai',
+      model = 'gpt-3.5-turbo',
+      temperature = 0.7,
+      max_tokens = 500
+    } = options;
+
+    // Check if we have the required API key for the provider
+    if (!this.apiKeys || !this.apiKeys[provider]) {
+      throw new Error(`${provider.toUpperCase()} API key not configured`);
+    }
+
+    try {
+      switch (provider) {
+        case 'openai':
+          return await this._generateWithOpenAI(prompt, model, temperature, max_tokens);
+        case 'anthropic':
+          return await this._generateWithAnthropic(prompt, model, temperature, max_tokens);
+        case 'groq':
+          return await this._generateWithGroq(prompt, model, temperature, max_tokens);
+        case 'mistral':
+          return await this._generateWithMistral(prompt, model, temperature, max_tokens);
+        default:
+          throw new Error(`Unsupported LLM provider: ${provider}`);
+      }
+    } catch (error) {
+      if (this.logger) {
+        this.logger.error('Failed to generate text', { 
+          error: error.message,
+          provider,
+          promptLength: prompt.length
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Generate text using OpenAI
+   */
+  async _generateWithOpenAI(prompt, model, temperature, max_tokens) {
     if (!this.openai) {
       throw new Error('OpenAI API key not configured');
     }
 
-    try {
-      const defaultOptions = {
-        model: 'gpt-3.5-turbo',
-        temperature: 0.7,
-        max_tokens: 500,
-        ...options
-      };
+    const response = await this.openai.chat.completions.create({
+      model: model || 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature,
+      max_tokens,
+    });
 
-      const chatCompletion = await this.openai.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        ...defaultOptions
-      });
-
-      const result = chatCompletion.choices[0].message.content;
-      this.logger.info('Text generated successfully', { promptLength: prompt.length, responseLength: result.length });
-      return result;
-    } catch (error) {
-      this.logger.error('Failed to generate text', { 
-        error: error.message,
-        promptLength: prompt.length
-      });
-      throw error;
-    }
+    return response.choices[0].message.content;
   }
 
   /**
-   * Analyze agent task and provide recommendations
-   * @param {string} taskDescription - Description of the task
-   * @param {array} agentCapabilities - List of agent capabilities
-   * @returns {object} Analysis and recommendations
+   * Generate text using Anthropic
    */
-  async analyzeAgentTask(taskDescription, agentCapabilities) {
+  async _generateWithAnthropic(prompt, model, temperature, max_tokens) {
+    const response = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: model || 'claude-3-haiku-20240307',
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+        max_tokens: max_tokens || 500,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKeys.anthropic,
+          'anthropic-version': '2023-06-01',
+        },
+      }
+    );
+
+    return response.data.content[0].text;
+  }
+
+  /**
+   * Generate text using Groq
+   */
+  async _generateWithGroq(prompt, model, temperature, max_tokens) {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: model || 'llama3-8b-8192',
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+        max_tokens: max_tokens || 500,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKeys.groq}`,
+        },
+      }
+    );
+
+    return response.data.choices[0].message.content;
+  }
+
+  /**
+   * Generate text using Mistral
+   */
+  async _generateWithMistral(prompt, model, temperature, max_tokens) {
+    const response = await axios.post(
+      'https://api.mistral.ai/v1/chat/completions',
+      {
+        model: model || 'mistral-tiny',
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+        max_tokens: max_tokens || 500,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKeys.mistral}`,
+        },
+      }
+    );
+
+    return response.data.choices[0].message.content;
+  }
+
+  /**
+   * Analyze an agent task using the specified LLM provider
+   * @param {string} taskDescription - Description of the task
+   * @param {string[]} agentCapabilities - List of agent capabilities
+   * @param {object} options - Options for the LLM request
+   * @returns {object} Task analysis
+   */
+  async analyzeAgentTask(taskDescription, agentCapabilities = [], options = {}) {
     const prompt = `
-      Analyze the following task for an AI agent in a corporate organization:
+      Analyze the following task for an AI agent:
       
-      Task: ${taskDescription}
+      Task: "${taskDescription}"
       
-      Agent Capabilities: ${agentCapabilities.join(', ')}
+      Agent Capabilities:
+      ${agentCapabilities.map(cap => `- ${cap}`).join('\n')}
       
       Please provide:
-      1. Task complexity assessment (low/medium/high)
-      2. Recommended approach to complete the task
-      3. Potential challenges or risks
+      1. Complexity assessment (low/medium/high)
+      2. Recommended approach
+      3. Potential challenges
       4. Estimated time to complete
-      5. Any additional resources needed
+      5. Resources needed
       
-      Format your response as JSON.
+      Format your response as a JSON object.
     `;
 
+    const response = await this.generateText(prompt, {
+      ...options,
+      max_tokens: 300
+    });
+
     try {
-      const result = await this.generateText(prompt, { 
-        model: 'gpt-3.5-turbo',
-        temperature: 0.3,
-        max_tokens: 800
-      });
-      
-      // Try to parse as JSON, fallback to text if parsing fails
-      try {
-        return JSON.parse(result);
-      } catch (parseError) {
-        // If JSON parsing fails, return as text analysis
-        return {
-          analysis: result,
-          complexity: 'unknown',
-          approach: 'unknown',
-          challenges: 'unknown',
-          estimatedTime: 'unknown',
-          resourcesNeeded: 'unknown'
-        };
-      }
+      return JSON.parse(response);
     } catch (error) {
-      this.logger.error('Failed to analyze agent task', { 
-        error: error.message,
-        taskLength: taskDescription.length
-      });
-      throw error;
+      // If JSON parsing fails, return a structured object
+      return {
+        complexity: 'unknown',
+        approach: response,
+        challenges: 'unknown',
+        estimatedTime: 'unknown',
+        resourcesNeeded: 'unknown'
+      };
     }
   }
 
   /**
-   * Generate a summary of agent activities
-   * @param {array} activities - List of agent activities
+   * Summarize agent activities using the specified LLM provider
+   * @param {object[]} activities - List of agent activities
+   * @param {object} options - Options for the LLM request
    * @returns {string} Summary of activities
    */
-  async summarizeAgentActivities(activities) {
+  async summarizeAgentActivities(activities, options = {}) {
     const prompt = `
-      Summarize the following agent activities in a corporate organization:
+      Summarize the following agent activities:
       
-      Activities:
-      ${activities.map((activity, index) => 
-        `${index + 1}. ${activity.agent} (${activity.type}): ${activity.action} at ${activity.timestamp}`
+      ${activities.map(activity => 
+        `- ${activity.agent} (${activity.type}): ${activity.action} at ${activity.timestamp}`
       ).join('\n')}
       
-      Please provide:
-      1. Overall activity summary
-      2. Most active agent types
-      3. Common activities
-      4. Any unusual patterns
-      5. Recommendations for optimization
+      Please provide a concise summary of the activities and any notable patterns.
     `;
 
-    try {
-      const result = await this.generateText(prompt, { 
-        model: 'gpt-3.5-turbo',
-        temperature: 0.5,
-        max_tokens: 600
-      });
-      
-      return result;
-    } catch (error) {
-      this.logger.error('Failed to summarize agent activities', { 
-        error: error.message,
-        activityCount: activities.length
-      });
-      throw error;
-    }
+    return await this.generateText(prompt, {
+      ...options,
+      max_tokens: 200
+    });
   }
 
   /**
-   * Generate natural language response to user query
+   * Generate a response to a user query using the specified LLM provider
    * @param {string} query - User query
    * @param {object} context - Context information
-   * @returns {string} Natural language response
+   * @param {object} options - Options for the LLM request
+   * @returns {string} Generated response
    */
-  async generateResponse(query, context = {}) {
+  async generateResponse(query, context = {}, options = {}) {
     const prompt = `
-      You are an AI assistant for a corporate AI agent organization. 
-      Answer the following query from a user:
-      
-      Query: ${query}
+      User has asked: "${query}"
       
       Context:
-      ${context.agentData ? `Organization Structure: ${JSON.stringify(context.agentData)}` : ''}
-      ${context.recentActivities ? `Recent Activities: ${JSON.stringify(context.recentActivities.slice(0, 5))}` : ''}
+      ${JSON.stringify(context, null, 2)}
       
       Please provide a helpful and professional response.
     `;
 
-    try {
-      const result = await this.generateText(prompt, { 
-        model: 'gpt-3.5-turbo',
-        temperature: 0.7,
-        max_tokens: 400
-      });
-      
-      return result;
-    } catch (error) {
-      this.logger.error('Failed to generate response', { 
-        error: error.message,
-        queryLength: query.length
-      });
-      throw error;
-    }
+    return await this.generateText(prompt, options);
   }
 }
 

@@ -1,24 +1,58 @@
 .llm-interface {
-  background-color: white;
-  border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-top: 20px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .llm-interface h2 {
   color: #333;
-  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.llm-interface h3 {
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.llm-controls {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.control-group label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #444;
+}
+
+.control-group select,
+.control-group input[type="range"] {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.control-group input[type="range"] {
+  margin-top: 5px;
 }
 
 .llm-section {
-  margin-bottom: 30px;
-}
-
-.llm-section h3 {
-  color: #555;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
 }
 
 .form-group {
@@ -28,8 +62,8 @@
 .form-group label {
   display: block;
   margin-bottom: 5px;
-  font-weight: bold;
-  color: #333;
+  font-weight: 500;
+  color: #444;
 }
 
 .form-group textarea {
@@ -37,15 +71,14 @@
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-family: inherit;
   font-size: 14px;
+  font-family: inherit;
   resize: vertical;
 }
 
-.form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+.form-group textarea:disabled {
+  background-color: #f5f5f5;
+  color: #999;
 }
 
 button {
@@ -79,14 +112,13 @@ button:disabled {
 .response {
   margin-top: 20px;
   padding: 15px;
-  background-color: #f8f9fa;
+  background-color: #e9f7ef;
   border-radius: 4px;
-  border-left: 4px solid #007bff;
 }
 
 .response h4 {
   margin-top: 0;
-  color: #333;
+  color: #2d5a37;
 }
 
 .response-content {
@@ -97,14 +129,13 @@ button:disabled {
 .parsed-task {
   margin-top: 20px;
   padding: 15px;
-  background-color: #f8f9fa;
+  background-color: #d1ecf1;
   border-radius: 4px;
-  border-left: 4px solid #28a745;
 }
 
 .parsed-task h4 {
   margin-top: 0;
-  color: #333;
+  color: #0c5460;
 }
 
 .task-details p {
@@ -113,5 +144,5 @@ button:disabled {
 }
 
 .task-details strong {
-  color: #555;
+  color: #333;
 }

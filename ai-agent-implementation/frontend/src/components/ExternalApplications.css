@@ -1,0 +1,232 @@
+.external-applications {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.external-applications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.external-applications-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.external-applications-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.search-input, .category-filter {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-input {
+  min-width: 200px;
+}
+
+.category-filter {
+  min-width: 150px;
+}
+
+.refresh-button, .connect-button, .disconnect-button, .details-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.refresh-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.refresh-button:hover {
+  background-color: #0056b3;
+}
+
+.connect-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.connect-button:hover {
+  background-color: #1e7e34;
+}
+
+.disconnect-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.disconnect-button:hover {
+  background-color: #c82333;
+}
+
+.details-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.details-button:hover {
+  background-color: #545b62;
+}
+
+.external-applications-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.application-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s;
+}
+
+.application-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.application-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.application-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.status-indicator {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-connected {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-disconnected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-error {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-unknown {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.application-details {
+  margin-bottom: 20px;
+}
+
+.application-description {
+  margin: 0 0 10px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.application-owner, .application-category {
+  margin: 5px 0;
+  color: #888;
+  font-size: 13px;
+}
+
+.status-message {
+  margin: 10px 0 0 0;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.status-message.status-connected {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-message.status-disconnected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-message.status-error {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.application-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.external-applications-loading, .external-applications-error, .no-applications {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.external-applications-error button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.external-applications-error button:hover {
+  background-color: #0056b3;
+}
+
+@media (max-width: 768px) {
+  .external-applications-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .external-applications-controls {
+    justify-content: center;
+  }
+  
+  .external-applications-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .application-actions {
+    flex-direction: column;
+  }
+  
+  .search-input {
+    min-width: auto;
+  }
+}

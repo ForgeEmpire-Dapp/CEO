@@ -24,18 +24,19 @@ class NaturalLanguageInterface {
    * Process a natural language query and generate appropriate response
    * @param {string} query - User query in natural language
    * @param {object} context - Additional context information
+   * @param {object} options - LLM options (provider, model, etc.)
    * @returns {object} Response with answer and any actions to take
    */
-  async processQuery(query, context = {}) {
+  async processQuery(query, context = {}, options = {}) {
     try {
       // First, determine the intent of the query
-      const intent = await this.determineIntent(query);
+      const intent = await this.determineIntent(query, options);
       
       // Gather relevant context
       const agentContext = await this.gatherContext(context);
       
       // Generate response based on intent
-      const response = await this.generateResponse(query, intent, agentContext);
+      const response = await this.generateResponse(query, intent, agentContext, options);
       
       if (this.logger) {
         this.logger.info('Query processed successfully', { 
@@ -64,9 +65,10 @@ class NaturalLanguageInterface {
   /**
    * Determine the intent of a user query
    * @param {string} query - User query
+   * @param {object} options - LLM options
    * @returns {string} Intent classification
    */
-  async determineIntent(query) {
+  async determineIntent(query, options = {}) {
     const prompt = `
       Classify the following user query into one of these intents:
       
@@ -84,7 +86,8 @@ class NaturalLanguageInterface {
 
     try {
       const intent = await this.llmService.generateText(prompt, {
-        model: 'gpt-3.5-turbo',
+        ...options,
+        model: options.model || 'gpt-3.5-turbo',
         temperature: 0.1,
         max_tokens: 10
       });
@@ -132,9 +135,10 @@ class NaturalLanguageInterface {
    * @param {string} query - Original query
    * @param {string} intent - Determined intent
    * @param {object} context - Context information
+   * @param {object} options - LLM options
    * @returns {string} Generated response
    */
-  async generateResponse(query, intent, context) {
+  async generateResponse(query, intent, context, options = {}) {
     let prompt;
     
     switch (intent) {
@@ -235,7 +239,8 @@ class NaturalLanguageInterface {
 
     try {
       const response = await this.llmService.generateText(prompt, {
-        model: 'gpt-3.5-turbo',
+        ...options,
+        model: options.model || 'gpt-3.5-turbo',
         temperature: 0.7,
         max_tokens: 500
       });
@@ -248,19 +253,20 @@ class NaturalLanguageInterface {
           intent,
           queryLength: query.length
         });
-      
-        // Fallback response
-        return "I apologize, but I'm having trouble processing your request right now. Please try again later.";
       }
+      
+      // Fallback response
+      return "I apologize, but I'm having trouble processing your request right now. Please try again later.";
     }
   }
 
   /**
    * Convert natural language task request to structured task
    * @param {string} taskRequest - Natural language task request
+   * @param {object} options - LLM options
    * @returns {object} Structured task object
    */
-  async parseTaskRequest(taskRequest) {
+  async parseTaskRequest(taskRequest, options = {}) {
     const prompt = `
       Convert the following natural language task request into a structured task object:
       
@@ -281,7 +287,8 @@ class NaturalLanguageInterface {
 
     try {
       const result = await this.llmService.generateText(prompt, {
-        model: 'gpt-3.5-turbo',
+        ...options,
+        model: options.model || 'gpt-3.5-turbo',
         temperature: 0.3,
         max_tokens: 300
       });

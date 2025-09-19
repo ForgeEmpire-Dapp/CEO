@@ -15,7 +15,7 @@ describe('NaturalLanguageInterface', () => {
   beforeEach(() => {
     // Create a mock LLM service
     mockLLMService = {
-      generateText: jest.fn().mockImplementation(async (prompt) => {
+      generateText: jest.fn().mockImplementation(async (prompt, options) => {
         if (prompt.includes('Classify the following user query')) {
           return 'status';
         }
@@ -43,7 +43,13 @@ describe('NaturalLanguageInterface', () => {
     const intent = await naturalLanguageInterface.determineIntent(query);
     
     expect(intent).toBe('status');
-    expect(mockLLMService.generateText).toHaveBeenCalled();
+    expect(mockLLMService.generateText).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        temperature: 0.1,
+        max_tokens: 10
+      })
+    );
   });
 
   test('should gather context information', async () => {
@@ -76,7 +82,7 @@ describe('NaturalLanguageInterface', () => {
     const intents = ['status', 'task', 'information', 'performance', 'help', 'other'];
     
     for (const intent of intents) {
-      mockLLMService.generateText.mockImplementationOnce(async (prompt) => {
+      mockLLMService.generateText.mockImplementationOnce(async (prompt, options) => {
         if (prompt.includes('Classify the following user query')) {
           return intent;
         }
@@ -113,7 +119,7 @@ describe('NaturalLanguageInterface', () => {
 
   test('should handle LLM errors gracefully by returning fallback responses', async () => {
     // Test that when LLM service throws an error, we get a fallback response
-    mockLLMService.generateText.mockImplementation(async (prompt) => {
+    mockLLMService.generateText.mockImplementation(async (prompt, options) => {
       throw new Error('LLM service unavailable');
     });
     

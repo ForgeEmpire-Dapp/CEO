@@ -19,10 +19,22 @@ describe('LLMService', () => {
     expect(llmService.logger).toBeDefined();
   });
 
-  test('should throw error when generating text without API key', async () => {
+  test('should throw error when generating text without API keys', async () => {
     await expect(llmService.generateText('Test prompt'))
       .rejects
-      .toThrow('OpenAI API key not configured');
+      .toThrow('OPENAI API key not configured');
+  });
+
+  test('should set API keys successfully', () => {
+    const apiKeys = {
+      openai: 'test-openai-key',
+      anthropic: 'test-anthropic-key',
+      groq: 'test-groq-key',
+      mistral: 'test-mistral-key'
+    };
+    
+    llmService.setApiKeys(apiKeys);
+    expect(llmService.apiKeys).toEqual(apiKeys);
   });
 
   test('should analyze agent task', async () => {
@@ -32,7 +44,7 @@ describe('LLMService', () => {
     
     await expect(llmService.analyzeAgentTask(taskDescription, agentCapabilities))
       .rejects
-      .toThrow('OpenAI API key not configured');
+      .toThrow('OPENAI API key not configured');
   });
 
   test('should summarize agent activities', async () => {
@@ -53,7 +65,7 @@ describe('LLMService', () => {
     
     await expect(llmService.summarizeAgentActivities(activities))
       .rejects
-      .toThrow('OpenAI API key not configured');
+      .toThrow('OPENAI API key not configured');
   });
 
   test('should generate response to user query', async () => {
@@ -67,6 +79,6 @@ describe('LLMService', () => {
     
     await expect(llmService.generateResponse(query, context))
       .rejects
-      .toThrow('OpenAI API key not configured');
+      .toThrow('OPENAI API key not configured');
   });
 });

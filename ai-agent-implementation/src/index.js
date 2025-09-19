@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const winston = require('winston');
+const cors = require('cors');
 
 // Load environment variables
 dotenv.config();
@@ -12,6 +13,12 @@ const PORT = process.env.PORT || DEFAULT_PORT;
 
 // Middleware
 app.use(express.json());
+
+// Add CORS middleware to allow requests from the frontend
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3002',
+  credentials: true
+}));
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -77,15 +84,26 @@ const mpcManager = new MPCManager(logger);
 // Initialize MCP Manager with required services
 const mcpManager = new MCPManager(logger, dataIntegration, podManager);
 
-// Initialize LLM components (if API key is available)
+// Initialize LLM components (if any API key is available)
 let llmService, agentDecisionMaker, naturalLanguageInterface;
-if (process.env.OPENAI_API_KEY) {
-  llmService = new LLMService(process.env.OPENAI_API_KEY, logger);
+const apiKeys = {
+  openai: process.env.OPENAI_API_KEY,
+  anthropic: process.env.ANTHROPIC_API_KEY,
+  groq: process.env.GROQ_API_KEY,
+  mistral: process.env.MISTRAL_API_KEY
+};
+
+// Check if any API key is provided
+const hasAnyApiKey = Object.values(apiKeys).some(key => key && key !== 'your-openai-api-key-here' && key !== 'your-anthropic-api-key-here' && key !== 'your-groq-api-key-here' && key !== 'your-mistral-api-key-here');
+
+if (hasAnyApiKey) {
+  llmService = new LLMService(null, logger); // Pass null for openaiApiKey since we'll set all keys
+  llmService.setApiKeys(apiKeys);
   agentDecisionMaker = new AgentDecisionMaker(llmService, logger);
   naturalLanguageInterface = new NaturalLanguageInterface(llmService, null, logger);
-  logger.info('LLM components initialized with OpenAI API key');
+  logger.info('LLM components initialized with available API keys');
 } else {
-  logger.warn('OPENAI_API_KEY not found in environment variables - LLM features will be limited');
+  logger.warn('No valid API keys found in environment variables - LLM features will be limited');
 }
 
 // Routes
@@ -134,6 +152,58 @@ app.get('/api/governance/ai-council', (req, res) => {
 app.get('/api/integration/data-flows', (req, res) => {
   const integrations = dataIntegration.getAllIntegrations();
   res.json(integrations);
+});
+
+// New routes for external applications
+app.get('/api/integration/external-applications', (req, res) => {
+  const applications = dataIntegration.getAllExternalApplications();
+  res.json(applications);
+});
+
+app.get('/api/integration/external-applications/:id', (req, res) => {
+  const application = dataIntegration.getExternalApplicationById(req.params.id);
+  if (application) {
+    res.json(application);
+  } else {
+    res.status(404).json({ error: 'External application not found' });
+  }
+});
+
+app.get('/api/integration/external-applications/search/:term', (req, res) => {
+  const applications = dataIntegration.searchExternalApplications(req.params.term);
+  res.json(applications);
+});
+
+app.get('/api/integration/external-applications/category/:category', (req, res) => {
+  const applications = dataIntegration.getExternalApplicationsByCategory(req.params.category);
+  res.json(applications);
+});
+
+app.post('/api/integration/external-applications/:id/connect', express.json(), async (req, res) => {
+  try {
+    const result = await dataIntegration.connectToExternalApplication(req.params.id, req.body.credentials);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/api/integration/external-applications/:id/disconnect', (req, res) => {
+  const result = dataIntegration.disconnectFromExternalApplication(req.params.id);
+  if (result) {
+    res.json({ success: true, message: 'Disconnected successfully' });
+  } else {
+    res.status(404).json({ error: 'External application not found' });
+  }
+});
+
+app.get('/api/integration/external-applications/:id/status', (req, res) => {
+  const status = dataIntegration.getExternalApplicationConnectionStatus(req.params.id);
+  if (status) {
+    res.json(status);
+  } else {
+    res.status(404).json({ error: 'External application not found' });
+  }
 });
 
 // Technology stack routes
@@ -238,8 +308,8 @@ app.get('/api/mcp/info', (req, res) => {
 if (llmService && naturalLanguageInterface) {
   app.post('/api/llm/query', express.json(), async (req, res) => {
     try {
-      const { query, context } = req.body;
-      const result = await naturalLanguageInterface.processQuery(query, context);
+      const { query, context, options } = req.body;
+      const result = await naturalLanguageInterface.processQuery(query, context, options);
       res.json(result);
     } catch (error) {
       logger.error('LLM query processing failed', { error: error.message });
@@ -249,21 +319,80 @@ if (llmService && naturalLanguageInterface) {
 
   app.post('/api/llm/parse-task', express.json(), async (req, res) => {
     try {
-      const { taskRequest } = req.body;
-      const task = await naturalLanguageInterface.parseTaskRequest(taskRequest);
+      const { taskRequest, options } = req.body;
+      const task = await naturalLanguageInterface.parseTaskRequest(taskRequest, options);
       res.json(task);
     } catch (error) {
       logger.error('Task parsing failed', { error: error.message });
       res.status(500).json({ error: 'Failed to parse task' });
     }
   });
+  
+  // New route to get available LLM providers
+  app.get('/api/llm/providers', (req, res) => {
+    const availableProviders = [];
+    
+    if (apiKeys.openai && apiKeys.openai !== 'your-openai-api-key-here') {
+      availableProviders.push({
+        id: 'openai',
+        name: 'OpenAI',
+        models: [
+          { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
+          { id: 'gpt-4', name: 'GPT-4' },
+          { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' }
+        ]
+      });
+    }
+    
+    if (apiKeys.anthropic && apiKeys.anthropic !== 'your-anthropic-api-key-here') {
+      availableProviders.push({
+        id: 'anthropic',
+        name: 'Anthropic',
+        models: [
+          { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
+          { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet' },
+          { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' }
+        ]
+      });
+    }
+    
+    if (apiKeys.groq && apiKeys.groq !== 'your-groq-api-key-here') {
+      availableProviders.push({
+        id: 'groq',
+        name: 'Groq',
+        models: [
+          { id: 'llama3-8b-8192', name: 'Llama 3 8B' },
+          { id: 'llama3-70b-8192', name: 'Llama 3 70B' },
+          { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' }
+        ]
+      });
+    }
+    
+    if (apiKeys.mistral && apiKeys.mistral !== 'your-mistral-api-key-here') {
+      availableProviders.push({
+        id: 'mistral',
+        name: 'Mistral',
+        models: [
+          { id: 'mistral-tiny', name: 'Mistral Tiny' },
+          { id: 'mistral-small', name: 'Mistral Small' },
+          { id: 'mistral-medium', name: 'Mistral Medium' }
+        ]
+      });
+    }
+    
+    res.json(availableProviders);
+  });
 } else {
   app.post('/api/llm/query', (req, res) => {
-    res.status(501).json({ error: 'LLM functionality not available - API key not configured' });
+    res.status(501).json({ error: 'LLM functionality not available - API keys not configured' });
   });
   
   app.post('/api/llm/parse-task', (req, res) => {
-    res.status(501).json({ error: 'LLM functionality not available - API key not configured' });
+    res.status(501).json({ error: 'LLM functionality not available - API keys not configured' });
+  });
+  
+  app.get('/api/llm/providers', (req, res) => {
+    res.status(501).json({ error: 'LLM functionality not available - API keys not configured' });
   });
 }
 

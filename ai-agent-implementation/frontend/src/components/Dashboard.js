@@ -4,40 +4,94 @@ import RealTimeMonitor from './RealTimeMonitor';
 import LLMInterface from './LLMInterface';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import TaskManager from './TaskManager';
+import ExternalApplications from './ExternalApplications';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [agentData, setAgentData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Use the API URL from environment variables or default to localhost:30001
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:30001';
 
   useEffect(() => {
-    // In a real implementation, this would fetch data from your backend API
-    const mockData = {
-      executive: [
-        { name: "CEO", status: "active", lastActive: new Date().toISOString() },
-        { name: "CTO", status: "active", lastActive: new Date().toISOString() },
-        { name: "CFO", status: "idle", lastActive: new Date(Date.now() - 3600000).toISOString() }
-      ],
-      director: [
-        { name: "VP of Engineering", status: "active", lastActive: new Date().toISOString() },
-        { name: "VP of Marketing", status: "active", lastActive: new Date().toISOString() }
-      ],
-      manager: [
-        { name: "Engineering Manager", status: "active", lastActive: new Date().toISOString() },
-        { name: "Marketing Manager", status: "idle", lastActive: new Date(Date.now() - 1800000).toISOString() }
-      ],
-      contributor: [
-        { name: "Software Engineer", status: "active", lastActive: new Date().toISOString() },
-        { name: "Data Scientist", status: "active", lastActive: new Date().toISOString() }
-      ]
+    const fetchAgentData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch data from all agent layers
+        const [executiveRes, directorRes, managerRes, contributorRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/agents/executive`),
+          fetch(`${API_BASE_URL}/api/agents/director`),
+          fetch(`${API_BASE_URL}/api/agents/manager`),
+          fetch(`${API_BASE_URL}/api/agents/individual-contributor`)
+        ]);
+
+        // Check if all requests were successful
+        if (!executiveRes.ok || !directorRes.ok || !managerRes.ok || !contributorRes.ok) {
+          throw new Error('Failed to fetch agent data');
+        }
+
+        // Parse the responses
+        const [executiveData, directorData, managerData, contributorData] = await Promise.all([
+          executiveRes.json(),
+          directorRes.json(),
+          managerRes.json(),
+          contributorRes.json()
+        ]);
+
+        // Structure the data as expected by the components
+        const structuredData = {
+          executive: executiveData.map(agent => ({
+            name: agent.name,
+            description: agent.description,
+            status: 'active',
+            lastActive: agent.lastActive || new Date().toISOString()
+          })),
+          director: directorData.map(agent => ({
+            name: agent.name,
+            description: agent.description,
+            status: 'active',
+            lastActive: agent.lastActive || new Date().toISOString()
+          })),
+          manager: managerData.map(agent => ({
+            name: agent.name,
+            description: agent.description,
+            status: 'active',
+            lastActive: agent.lastActive || new Date().toISOString()
+          })),
+          contributor: contributorData.map(agent => ({
+            name: agent.name || 'Individual Contributor',
+            description: agent.description || 'Specialist & Associate',
+            status: 'active',
+            lastActive: agent.lastActive || new Date().toISOString()
+          }))
+        };
+
+        setAgentData(structuredData);
+      } catch (err) {
+        console.error('Error fetching agent data:', err);
+        setError('Failed to load agent data from the backend API.');
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    setAgentData(mockData);
-    setLoading(false);
-  }, []);
+
+    fetchAgentData();
+  }, [API_BASE_URL]);
 
   const renderTabContent = () => {
+    if (error) {
+      return (
+        <div className="dashboard-error">
+          <p>{error}</p>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview':
         return (
@@ -70,6 +124,13 @@ const Dashboard = () => {
           <div>
             <h2>AI Assistant</h2>
             <LLMInterface />
+          </div>
+        );
+      case 'external-apps':
+        return (
+          <div>
+            <h2>External Applications</h2>
+            <ExternalApplications />
           </div>
         );
       default:
@@ -113,6 +174,12 @@ const Dashboard = () => {
           onClick={() => setActiveTab('assistant')}
         >
           AI Assistant
+        </button>
+        <button 
+          className={activeTab === 'external-apps' ? 'active' : ''}
+          onClick={() => setActiveTab('external-apps')}
+        >
+          External Apps
         </button>
       </nav>
       <div className="dashboard-content">

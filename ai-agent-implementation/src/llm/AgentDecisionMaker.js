@@ -1,12 +1,12 @@
-const LLMService = require('./LLMService');
+const winston = require('winston');
 
 /**
- * Agent Decision Maker that uses LLM to enhance agent decision-making capabilities
+ * Agent Decision Maker using LLM capabilities
  */
 class AgentDecisionMaker {
   /**
    * Create a new Agent Decision Maker
-   * @param {LLMService} llmService - LLM service instance
+   * @param {object} llmService - LLM service instance
    * @param {object} logger - Logger instance
    */
   constructor(llmService, logger = null) {
@@ -19,32 +19,31 @@ class AgentDecisionMaker {
   }
 
   /**
-   * Analyze a task and provide decision support
-   * @param {object} agent - The agent requesting decision support
-   * @param {string} task - The task to analyze
-   * @param {object} context - Additional context information
-   * @returns {object} Decision support information
+   * Analyze a task using LLM capabilities
+   * @param {object} agent - Agent object
+   * @param {string} task - Task description
+   * @param {object} options - LLM options
+   * @returns {object} Task analysis
    */
-  async analyzeTask(agent, task, context = {}) {
+  async analyzeTask(agent, task, options = {}) {
     try {
-      // Gather agent capabilities
-      const agentCapabilities = agent.tools || [];
-      
-      // Get LLM analysis
-      const analysis = await this.llmService.analyzeAgentTask(task, agentCapabilities);
+      const analysis = await this.llmService.analyzeAgentTask(
+        task, 
+        agent.tools || [],
+        options
+      );
       
       if (this.logger) {
-        this.logger.info('Task analysis completed', { 
-          agent: agent.name, 
-          taskLength: task.length 
+        this.logger.info('Task analyzed successfully', { 
+          agent: agent.name,
+          taskLength: task.length
         });
       }
       
       return {
         agent: agent.name,
         task,
-        analysis,
-        timestamp: new Date().toISOString()
+        analysis
       };
     } catch (error) {
       if (this.logger) {
@@ -54,55 +53,61 @@ class AgentDecisionMaker {
           taskLength: task.length
         });
       }
-      throw error;
+      
+      // Return a default analysis if LLM fails
+      return {
+        agent: agent.name,
+        task,
+        analysis: {
+          complexity: 'unknown',
+          approach: 'Unable to analyze task due to LLM error',
+          challenges: 'unknown',
+          estimatedTime: 'unknown',
+          resourcesNeeded: 'unknown'
+        }
+      };
     }
   }
 
   /**
-   * Generate strategic recommendations for an agent
-   * @param {object} agent - The agent requesting recommendations
-   * @param {array} metrics - Current agent metrics
+   * Generate recommendations for an agent
+   * @param {object} agent - Agent object
+   * @param {object[]} metrics - Performance metrics
    * @param {object} orgContext - Organizational context
-   * @returns {object} Strategic recommendations
+   * @param {object} options - LLM options
+   * @returns {object} Recommendations
    */
-  async generateRecommendations(agent, metrics, orgContext = {}) {
+  async generateRecommendations(agent, metrics = [], orgContext = {}, options = {}) {
     const prompt = `
-      As an AI strategic advisor, provide recommendations for the following agent:
+      Generate recommendations for the following agent:
       
       Agent: ${agent.name}
-      Role: ${agent.description}
+      Description: ${agent.description || 'No description provided'}
       
-      Current Metrics:
-      ${metrics.map(metric => `- ${metric.name}: ${metric.value}`).join('\n')}
+      Performance Metrics:
+      ${metrics.map(metric => `- ${metric.name}: ${metric.value}`).join('\n') || 'No metrics provided'}
       
       Organizational Context:
-      ${orgContext.department ? `Department: ${orgContext.department}` : ''}
-      ${orgContext.goals ? `Goals: ${orgContext.goals.join(', ')}` : ''}
+      ${JSON.stringify(orgContext, null, 2)}
       
-      Please provide:
-      1. Performance assessment
-      2. Strategic recommendations
-      3. Areas for improvement
-      4. Collaboration opportunities
+      Please provide 3-5 actionable recommendations for improvement.
     `;
 
     try {
       const recommendations = await this.llmService.generateText(prompt, {
-        model: 'gpt-3.5-turbo',
-        temperature: 0.5,
-        max_tokens: 600
+        ...options,
+        max_tokens: 300
       });
       
       if (this.logger) {
-        this.logger.info('Recommendations generated', { 
-          agent: agent.name 
+        this.logger.info('Recommendations generated successfully', { 
+          agent: agent.name
         });
       }
       
       return {
         agent: agent.name,
-        recommendations,
-        timestamp: new Date().toISOString()
+        recommendations
       };
     } catch (error) {
       if (this.logger) {
@@ -111,108 +116,104 @@ class AgentDecisionMaker {
           agent: agent.name
         });
       }
-      throw error;
+      
+      return {
+        agent: agent.name,
+        recommendations: 'Unable to generate recommendations due to LLM error'
+      };
     }
   }
 
   /**
    * Resolve conflicts between agents
-   * @param {array} agents - Agents involved in conflict
+   * @param {object[]} agents - List of agents involved in conflict
    * @param {string} conflictDescription - Description of the conflict
    * @param {object} context - Context information
+   * @param {object} options - LLM options
    * @returns {object} Conflict resolution
    */
-  async resolveConflict(agents, conflictDescription, context = {}) {
+  async resolveConflict(agents, conflictDescription, context = {}, options = {}) {
     const prompt = `
-      As an AI conflict resolution specialist, help resolve the following conflict:
+      Resolve the following conflict between agents:
       
       Conflict: ${conflictDescription}
       
       Involved Agents:
-      ${agents.map(agent => `- ${agent.name} (${agent.description})`).join('\n')}
+      ${agents.map(agent => `- ${agent.name}: ${agent.description || 'No description'}`).join('\n')}
       
       Context:
-      ${context.project ? `Project: ${context.project}` : ''}
-      ${context.priority ? `Priority: ${context.priority}` : ''}
-      ${context.deadline ? `Deadline: ${context.deadline}` : ''}
+      ${JSON.stringify(context, null, 2)}
       
-      Please provide:
-      1. Root cause analysis
-      2. Proposed resolution
-      3. Implementation steps
-      4. Prevention strategies
+      Please provide a resolution strategy that addresses the conflict
+      and promotes collaboration between the agents.
     `;
 
     try {
       const resolution = await this.llmService.generateText(prompt, {
-        model: 'gpt-3.5-turbo',
-        temperature: 0.3,
-        max_tokens: 700
+        ...options,
+        max_tokens: 400
       });
       
       if (this.logger) {
-        this.logger.info('Conflict resolution generated', { 
-          agentCount: agents.length,
-          conflictLength: conflictDescription.length
+        this.logger.info('Conflict resolved successfully', { 
+          agentCount: agents.length
         });
       }
       
       return {
-        agents: agents.map(a => a.name),
+        agents: agents.map(agent => agent.name),
         conflict: conflictDescription,
-        resolution,
-        timestamp: new Date().toISOString()
+        resolution
       };
     } catch (error) {
       if (this.logger) {
         this.logger.error('Failed to resolve conflict', { 
           error: error.message,
-          agentCount: agents.length,
-          conflictLength: conflictDescription.length
+          agentCount: agents.length
         });
       }
-      throw error;
+      
+      return {
+        agents: agents.map(agent => agent.name),
+        conflict: conflictDescription,
+        resolution: 'Unable to resolve conflict due to LLM error'
+      };
     }
   }
 
   /**
    * Optimize resource allocation
-   * @param {array} resources - Available resources
-   * @param {array} requests - Resource requests
+   * @param {object[]} resources - Available resources
+   * @param {object[]} requests - Resource requests
    * @param {object} constraints - Allocation constraints
+   * @param {object} options - LLM options
    * @returns {object} Resource allocation plan
    */
-  async optimizeResourceAllocation(resources, requests, constraints = {}) {
+  async optimizeResourceAllocation(resources = [], requests = [], constraints = {}, options = {}) {
     const prompt = `
-      As an AI resource optimization specialist, create an optimal resource allocation plan:
+      Optimize the allocation of resources based on the following information:
       
       Available Resources:
-      ${resources.map(resource => `- ${resource.name} (${resource.type}): ${resource.availability}`).join('\n')}
+      ${resources.map(resource => `- ${resource.name} (${resource.type}): ${resource.availability}`).join('\n') || 'No resources listed'}
       
       Resource Requests:
-      ${requests.map(request => `- ${request.agent}: ${request.resource} (${request.priority} priority)`).join('\n')}
+      ${requests.map(request => `- ${request.agent}: ${request.resource} (Priority: ${request.priority})`).join('\n') || 'No requests listed'}
       
       Constraints:
-      ${constraints.budget ? `Budget: ${constraints.budget}` : ''}
-      ${constraints.timeline ? `Timeline: ${constraints.timeline}` : ''}
-      ${constraints.dependencies ? `Dependencies: ${constraints.dependencies.join(', ')}` : ''}
+      ${JSON.stringify(constraints, null, 2) || 'No constraints specified'}
       
-      Please provide:
-      1. Allocation recommendations
-      2. Priority justification
-      3. Risk assessment
-      4. Contingency plans
+      Please provide an allocation plan that optimizes resource usage
+      while satisfying the most critical requests.
     `;
 
     try {
       const allocationPlan = await this.llmService.generateText(prompt, {
-        model: 'gpt-3.5-turbo',
-        temperature: 0.4,
-        max_tokens: 800
+        ...options,
+        max_tokens: 500
       });
       
       if (this.logger) {
-        this.logger.info('Resource allocation plan generated', { 
+        this.logger.info('Resource allocation optimized successfully', { 
           resourceCount: resources.length,
           requestCount: requests.length
         });
@@ -221,8 +222,7 @@ class AgentDecisionMaker {
       return {
         resources: resources.length,
         requests: requests.length,
-        allocationPlan,
-        timestamp: new Date().toISOString()
+        allocationPlan
       };
     } catch (error) {
       if (this.logger) {
@@ -232,7 +232,12 @@ class AgentDecisionMaker {
           requestCount: requests.length
         });
       }
-      throw error;
+      
+      return {
+        resources: resources.length,
+        requests: requests.length,
+        allocationPlan: 'Unable to generate allocation plan due to LLM error'
+      };
     }
   }
 }

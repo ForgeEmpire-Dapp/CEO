@@ -49,7 +49,35 @@ describe('AgentDecisionMaker', () => {
     expect(result.analysis).toBeDefined();
     expect(mockLLMService.analyzeAgentTask).toHaveBeenCalledWith(
       task, 
-      agent.tools
+      agent.tools,
+      {}
+    );
+  });
+
+  test('should analyze task with LLM support and provider options', async () => {
+    const agent = {
+      name: 'TestAgent',
+      description: 'A test agent',
+      tools: ['data_analysis', 'reporting']
+    };
+    
+    const task = 'Analyze customer feedback and generate insights';
+    const options = {
+      provider: 'anthropic',
+      model: 'claude-3-haiku-20240307',
+      temperature: 0.5
+    };
+    
+    const result = await agentDecisionMaker.analyzeTask(agent, task, options);
+    
+    expect(result).toBeDefined();
+    expect(result.agent).toBe('TestAgent');
+    expect(result.task).toBe(task);
+    expect(result.analysis).toBeDefined();
+    expect(mockLLMService.analyzeAgentTask).toHaveBeenCalledWith(
+      task, 
+      agent.tools,
+      options
     );
   });
 
